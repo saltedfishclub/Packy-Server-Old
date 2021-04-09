@@ -26,34 +26,36 @@ fun Application.module(testing: Boolean = false) {
     }
 
     routing {
-        get("/api/v1/") {
-            call.respondText("Welcome to use Packy API!")
-        }
-        get("/api/v1/status") {
-            val status = environment.config.property("ktor.status").getString()
-            val os = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean::class.java)
-            val average = os.systemLoadAverage
-            call.respond(mapOf("status" to status, "average" to average))
-        }
-        get("/api/v1/user/{id}") {
-            database
-                .from(Users)
-                .select(Users.user_id)
-                .where { (Users.user_id eq call.parameters["id"].toString()) }
-                .forEach { row ->
-                    val userName = row[Users.user_name].toString()
-                    val userJoin = row[Users.user_join_time].toString()
-                    val userPublishedPackages = row[Users.user_join_time].toString()
-                    val userBio = row[Users.user_bio].toString()
-                    val userEmail = row[Users.user_email].toString()
-                    val userPerm = row[Users.user_perm].toString()
-                    call.respond(mapOf("name" to userName,
-                                       "joinTime" to userJoin,
-                                       "publishedPackages" to userPublishedPackages,
-                                       "bio" to userBio,
-                                       "email" to userEmail,
-                                       "permissionLevel" to userPerm))
-                }
+        route("/api/v1") {
+            get("/") {
+                call.respondText("Welcome to use Packy API!")
+            }
+            get("/status") {
+                val status = environment.config.property("ktor.status").getString()
+                val os = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean::class.java)
+                val average = os.systemLoadAverage
+                call.respond(mapOf("status" to status, "average" to average))
+            }
+            get("/user/{id}") {
+                database
+                    .from(Users)
+                    .select(Users.user_id)
+                    .where { (Users.user_id eq call.parameters["id"].toString()) }
+                    .forEach { row ->
+                        val userName = row[Users.user_name].toString()
+                        val userJoin = row[Users.user_join_time].toString()
+                        val userPublishedPackages = row[Users.user_join_time].toString()
+                        val userBio = row[Users.user_bio].toString()
+                        val userEmail = row[Users.user_email].toString()
+                        val userPerm = row[Users.user_perm].toString()
+                        call.respond(mapOf("name" to userName,
+                            "joinTime" to userJoin,
+                            "publishedPackages" to userPublishedPackages,
+                            "bio" to userBio,
+                            "email" to userEmail,
+                            "permissionLevel" to userPerm))
+                    }
+            }
         }
     }
 }
