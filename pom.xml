@@ -97,6 +97,16 @@
             <version>RELEASE</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-auth</artifactId>
+            <version>${ktor_version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-auth-jwt</artifactId>
+            <version>${ktor_version}</version>
+        </dependency>
     </dependencies>
     <build>
         <sourceDirectory>${project.basedir}/src</sourceDirectory>

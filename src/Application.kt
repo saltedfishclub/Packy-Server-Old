@@ -1,13 +1,17 @@
 package cc.sfclub
 
+import body.User
 import cc.sfclub.enum.Type
 import cc.sfclub.tables.Users
 import com.sun.management.OperatingSystemMXBean
 import io.ktor.application.*
+import io.ktor.auth.*
+import io.ktor.auth.jwt.*
 import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.gson.*
 import io.ktor.features.*
+import io.ktor.request.*
 import org.ktorm.database.Database
 import org.ktorm.dsl.*
 import org.ktorm.entity.any
@@ -22,9 +26,19 @@ fun Application.module(testing: Boolean = false) {
     val user = environment.config.property("ktor.mysql.user").getString()
     val password = environment.config.property("ktor.mysql.password").getString()
     val database = Database.connect("jdbc:mysql://localhost:3306/PACKY", user = user, password = password)
+    val verifier = Auth.makeJwtVerifier()
 
     install(ContentNegotiation) {
         gson {
+        }
+    }
+
+    install(Authentication) {
+        jwt {
+            verifier(verifier)
+            validate {
+                UserIdPrincipal(it.payload.getClaim("packy").asString())
+            }
         }
     }
 
@@ -61,6 +75,20 @@ fun Application.module(testing: Boolean = false) {
                         }
                 } else {
                     call.respond(mapOf("message" to "User not found", "type" to Type.USER_NOT_FOUND))
+                }
+            }
+            post("/login") {
+                //val user = call.receive<User>()
+                if(database.sequenceOf(Users).any {Users.user_name eq "abcdefg"}) {
+                    database
+                        .from(Users)
+                        .select(Users.user_name, Users.user_pass)
+                        .where {(Users.user_pass eq "114514") and (Users.user_name eq "abcdefg")}
+                        .forEach { row ->
+                            call.respond(mapOf("type" to Type.SUCCESS, "token" to Auth.sign("abcdefg")))
+                        }
+                } else {
+                    call.respond(mapOf("message" to "User or password wrong", "type" to Type.WRONG_PASSWORD_OR_NAME))
                 }
             }
         }

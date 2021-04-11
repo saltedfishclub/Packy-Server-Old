@@ -10,4 +10,5 @@ object Users : Table<Nothing>("packy_users") {
     val user_perm = varchar("user_perm")
     val user_publish_pkgs = varchar("user_publish_pkgs")
     val user_bio = text("user_bio")
+    val user_pass = varchar("user_pass")
 }
