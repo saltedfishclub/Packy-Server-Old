@@ -1,6 +1,6 @@
 package cc.sfclub
 
-import cc.sfclub.enum.ExceptionType
+import cc.sfclub.enum.Type
 import cc.sfclub.tables.Users
 import com.sun.management.OperatingSystemMXBean
 import io.ktor.application.*
@@ -60,7 +60,7 @@ fun Application.module(testing: Boolean = false) {
                                 "permissionLevel" to userPerm))
                         }
                 } else {
-                    call.respond(mapOf("message" to "User not found", "type" to ExceptionType.USER_NOT_FOUND))
+                    call.respond(mapOf("message" to "User not found", "type" to Type.USER_NOT_FOUND))
                 }
             }
         }
