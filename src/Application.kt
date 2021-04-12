@@ -1,6 +1,5 @@
 package cc.sfclub
 
-import body.User
 import cc.sfclub.enum.Type
 import cc.sfclub.tables.Users
 import com.sun.management.OperatingSystemMXBean
@@ -78,14 +77,17 @@ fun Application.module(testing: Boolean = false) {
                 }
             }
             post("/login") {
-                //val user = call.receive<User>()
-                if(database.sequenceOf(Users).any {Users.user_name eq "abcdefg"}) {
+                val parameters = call.receiveParameters()
+                val userName = parameters["user"].toString()
+                val passWord = parameters["pass"].toString()
+
+                if(database.sequenceOf(Users).any {(Users.user_name eq userName) and (Users.user_pass eq passWord)}) {
                     database
                         .from(Users)
                         .select(Users.user_name, Users.user_pass)
-                        .where {(Users.user_pass eq "114514") and (Users.user_name eq "abcdefg")}
+                        .where {(Users.user_pass eq passWord) and (Users.user_name eq userName)}
                         .forEach { row ->
-                            call.respond(mapOf("type" to Type.SUCCESS, "token" to Auth.sign("abcdefg")))
+                            call.respond(mapOf("type" to Type.SUCCESS, "token" to Auth.sign(userName)))
                         }
                 } else {
                     call.respond(mapOf("message" to "User or password wrong", "type" to Type.WRONG_PASSWORD_OR_NAME))
