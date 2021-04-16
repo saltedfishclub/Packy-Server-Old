@@ -151,6 +151,7 @@
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>2.6</version>
                 <configuration>
+                    <outputDirectory>${project.build.directory}/lib</outputDirectory>
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
@@ -174,6 +175,7 @@
                                     <mainClass>${main.class}</mainClass>
                                 </manifest>
                             </archive>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
                             <descriptorRefs>
                                 <descriptorRef>jar-with-dependencies</descriptorRef>
                             </descriptorRefs>
