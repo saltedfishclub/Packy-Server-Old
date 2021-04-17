@@ -21,7 +21,7 @@ object Auth {
     private fun makeToken(name: String): String = JWT.create()
         .withSubject("Authentication")
         .withIssuer(issuer)
-        .withClaim("packy", name)
+        .withClaim("user_name", name)
         .withExpiresAt(getExpiration())
         .sign(algorithm)
 

@@ -109,8 +109,8 @@
         </dependency>
     </dependencies>
     <build>
-        <sourceDirectory>${project.basedir}/src</sourceDirectory>
-        <testSourceDirectory>${project.basedir}/test</testSourceDirectory>
+        <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
+        <testSourceDirectory>${project.basedir}/src/test</testSourceDirectory>
         <resources>
             <resource>
                 <directory>${project.basedir}/resources</directory>

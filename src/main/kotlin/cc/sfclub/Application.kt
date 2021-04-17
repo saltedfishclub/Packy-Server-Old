@@ -1,6 +1,7 @@
 package cc.sfclub
 
 import cc.sfclub.enum.Type
+import cc.sfclub.principals.UserInfo
 import cc.sfclub.tables.Resources
 import cc.sfclub.tables.Users
 import com.sun.management.OperatingSystemMXBean
@@ -122,6 +123,9 @@ fun Application.module(testing: Boolean = false) {
                             }
                         }
                     }
+                }
+                post("/test") {
+                    val info = call.authentication.principal<UserInfo>()
                 }
             }
         }
