@@ -1,7 +1,8 @@
 package cc.sfclub
 
+import cc.sfclub.enum.Permissions
 import cc.sfclub.enum.Type
-import cc.sfclub.principals.UserInfo
+import cc.sfclub.exceptions.RegisterException
 import cc.sfclub.tables.Resources
 import cc.sfclub.tables.Users
 import com.sun.management.OperatingSystemMXBean
@@ -12,6 +13,7 @@ import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.gson.*
 import io.ktor.features.*
+import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.request.*
 import org.ktorm.database.Database
@@ -41,9 +43,20 @@ fun Application.module(testing: Boolean = false) {
         jwt {
             verifier(verifier)
             validate {
-                UserIdPrincipal(it.payload.getClaim("packy").asString())
+                UserIdPrincipal(it.payload.getClaim("user_name").asString())
             }
         }
+    }
+
+    install(StatusPages) {
+        exception<RegisterException> { exception ->
+            if(exception.message ?: "" == Type.USER_EXISTED.toString()) {
+                call.respond(HttpStatusCode.Conflict, mapOf("message" to "This username has been registered",
+                    ("type" to exception.message ?: "") as Pair<Any, Any>
+                ))
+            }
+        }
+
     }
 
     routing {
@@ -106,6 +119,23 @@ fun Application.module(testing: Boolean = false) {
                 }
             }
 
+            post("/register") {
+                val parameters = call.receiveParameters()
+                val userName = parameters["name"].toString()
+                val userPass = parameters["pass"].toString()
+                val email = parameters["email"].toString()
+                val joinTime = parameters["joinTime"].toString()
+                if(database.sequenceOf(Users).any {Users.user_name eq userName}) throw RegisterException(Type.USER_EXISTED.toString())
+                database.insert(Users) {
+                    set(it.user_name, userName)
+                    set(it.user_email, email)
+                    set(it.user_pass, userPass)
+                    set(it.user_perm, Permissions.NORMAL.toString())
+                    set(it.user_join_time, joinTime)
+                }
+                call.respond(mapOf("message" to "Registered successfully", "type" to Type.SUCCESS))
+            }
+
             authenticate {
                 post("/resource") {
                     val multipartData = call.receiveMultipart()
@@ -124,9 +154,8 @@ fun Application.module(testing: Boolean = false) {
                         }
                     }
                 }
-                post("/test") {
-                    val info = call.authentication.principal<UserInfo>()
-                }
+
+
             }
         }
     }
