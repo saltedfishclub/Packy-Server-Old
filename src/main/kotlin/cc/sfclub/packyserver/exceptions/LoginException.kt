@@ -1,4 +1,4 @@
-package cc.sfclub.exceptions
+package cc.sfclub.packyserver.exceptions
 
 import java.lang.RuntimeException
 

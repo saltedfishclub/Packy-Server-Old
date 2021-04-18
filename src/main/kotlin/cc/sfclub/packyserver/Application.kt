@@ -1,10 +1,10 @@
-package cc.sfclub
+package cc.sfclub.packyserver
 
-import cc.sfclub.enum.Permissions
-import cc.sfclub.enum.Type
-import cc.sfclub.exceptions.RegisterException
-import cc.sfclub.tables.Resources
-import cc.sfclub.tables.Users
+import cc.sfclub.packyserver.enum.Permissions
+import cc.sfclub.packyserver.enum.Type
+import cc.sfclub.packyserver.exceptions.RegisterException
+import cc.sfclub.packyserver.tables.Resources
+import cc.sfclub.packyserver.tables.Users
 import com.sun.management.OperatingSystemMXBean
 import io.ktor.application.*
 import io.ktor.auth.*
@@ -104,7 +104,7 @@ fun Application.module(testing: Boolean = false) {
             post("/login") {
                 val parameters = call.receiveParameters()
                 val userName = parameters["user"].toString()
-                val passWord = parameters["pass"].toString()
+                val passWord = parameters["pass"].toString().hashCode()
 
                 if(database.sequenceOf(Users).any {(Users.user_name eq userName) and (Users.user_pass eq passWord)}) {
                     database
@@ -122,7 +122,7 @@ fun Application.module(testing: Boolean = false) {
             post("/register") {
                 val parameters = call.receiveParameters()
                 val userName = parameters["name"].toString()
-                val userPass = parameters["pass"].toString()
+                val userPass = parameters["pass"].toString().hashCode()
                 val email = parameters["email"].toString()
                 val joinTime = parameters["joinTime"].toString()
                 if(database.sequenceOf(Users).any {Users.user_name eq userName}) throw RegisterException(Type.USER_EXISTED.toString())

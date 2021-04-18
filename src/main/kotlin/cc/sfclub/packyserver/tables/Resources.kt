@@ -1,4 +1,4 @@
-package cc.sfclub.tables
+package cc.sfclub.packyserver.tables
 
 import org.ktorm.schema.Table
 import org.ktorm.schema.text
