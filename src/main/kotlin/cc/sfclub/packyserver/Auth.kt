@@ -16,14 +16,15 @@ object Auth {
         .withIssuer(issuer)
         .build()
 
-    fun sign(name: String): String {
-        return makeToken(name)
+    fun sign(name: String, perm: String): String {
+        return makeToken(name, perm)
     }
 
-    private fun makeToken(name: String): String = JWT.create()
+    private fun makeToken(name: String, perm: String): String = JWT.create()
         .withSubject("Authentication")
         .withIssuer(issuer)
         .withClaim("user_name", name)
+        .withClaim("user_perm", perm)
         .withExpiresAt(getExpiration())
         .sign(algorithm)
 

@@ -2,7 +2,9 @@ package cc.sfclub.packyserver
 
 import cc.sfclub.packyserver.enum.Permissions
 import cc.sfclub.packyserver.enum.Type
+import cc.sfclub.packyserver.exceptions.LoginException
 import cc.sfclub.packyserver.exceptions.RegisterException
+import cc.sfclub.packyserver.principals.UserInfo
 import cc.sfclub.packyserver.tables.Resources
 import cc.sfclub.packyserver.tables.Users
 import com.sun.management.OperatingSystemMXBean
@@ -43,7 +45,7 @@ fun Application.module(testing: Boolean = false) {
         jwt {
             verifier(verifier)
             validate {
-                UserIdPrincipal(it.payload.getClaim("user_name").asString())
+                UserInfo(it.payload.getClaim("user_name").asString(), it.payload.getClaim("user_perm").asString())
             }
         }
     }
@@ -56,7 +58,13 @@ fun Application.module(testing: Boolean = false) {
                 ))
             }
         }
-
+        exception<LoginException> { exception ->
+            if(exception.message ?: "" == Type.WRONG_PASSWORD_OR_NAME.toString()) {
+                call.respond(HttpStatusCode.NotFound, mapOf("message" to "Username or password wrong",
+                    ("type" to exception.message ?: "") as Pair<Any, Any>
+                ))
+            }
+        }
     }
 
     routing {
@@ -106,17 +114,15 @@ fun Application.module(testing: Boolean = false) {
                 val userName = parameters["user"].toString()
                 val passWord = parameters["pass"].toString().hashCode()
 
-                if(database.sequenceOf(Users).any {(Users.user_name eq userName) and (Users.user_pass eq passWord)}) {
-                    database
-                        .from(Users)
-                        .select(Users.user_name, Users.user_pass)
-                        .where {(Users.user_pass eq passWord) and (Users.user_name eq userName)}
-                        .forEach { row ->
-                            call.respond(mapOf("type" to Type.SUCCESS, "token" to Auth.sign(userName)))
-                        }
-                } else {
-                    call.respond(mapOf("message" to "User or password wrong", "type" to Type.WRONG_PASSWORD_OR_NAME))
-                }
+                if(!database.sequenceOf(Users).any {(Users.user_name eq userName) and (Users.user_pass eq passWord)}) throw LoginException(Type.WRONG_PASSWORD_OR_NAME.toString())
+
+                database
+                    .from(Users)
+                    .select(Users.user_name, Users.user_pass, Users.user_perm)
+                    .where {(Users.user_pass eq passWord) and (Users.user_name eq userName)}
+                    .forEach { row ->
+                        call.respond(mapOf("type" to Type.SUCCESS, "token" to Auth.sign(userName, row[Users.user_perm].toString())))
+                    }
             }
 
             post("/register") {
@@ -155,7 +161,12 @@ fun Application.module(testing: Boolean = false) {
                     }
                 }
 
-
+                post("/test") {
+                    val info = call.authentication.principal<UserInfo>()
+                    if (info != null) {
+                        call.respond(info.user_perm)
+                    }
+                }
             }
         }
     }
