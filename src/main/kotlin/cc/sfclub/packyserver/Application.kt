@@ -2,15 +2,12 @@ package cc.sfclub.packyserver
 
 import cc.sfclub.packyserver.enum.Permissions
 import cc.sfclub.packyserver.enum.Type
-import cc.sfclub.packyserver.exceptions.LoginException
-import cc.sfclub.packyserver.exceptions.PackageException
-import cc.sfclub.packyserver.exceptions.RegisterException
-import cc.sfclub.packyserver.exceptions.UserInfoException
+import cc.sfclub.packyserver.exceptions.*
 import cc.sfclub.packyserver.principals.UserInfo
 import cc.sfclub.packyserver.tables.Packages
-import cc.sfclub.packyserver.tables.Packages.primaryKey
 import cc.sfclub.packyserver.tables.Resources
 import cc.sfclub.packyserver.tables.Users
+import cc.sfclub.packyserver.utils.GenerateCaptcha
 import com.sun.management.OperatingSystemMXBean
 import io.ktor.application.*
 import io.ktor.auth.*
@@ -26,9 +23,6 @@ import org.ktorm.database.Database
 import org.ktorm.dsl.*
 import org.ktorm.entity.any
 import org.ktorm.entity.sequenceOf
-import org.ktorm.schema.boolean
-import org.ktorm.schema.int
-import org.ktorm.schema.varchar
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.util.*
@@ -40,6 +34,8 @@ fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 fun Application.module(testing: Boolean = false) {
     val user = environment.config.property("ktor.mysql.user").getString()
     val password = environment.config.property("ktor.mysql.password").getString()
+    val sender = environment.config.property("ktor.captcha.sender").getString()
+    val host = environment.config.property("ktor.captcha.host").getString()
     val database = Database.connect("jdbc:mysql://localhost:3306/PACKY", user = user, password = password)
     val verifier = Auth.makeJwtVerifier()
 
@@ -89,6 +85,14 @@ fun Application.module(testing: Boolean = false) {
         exception<PackageException> { exception ->
             if(exception.message ?: "" == Type.PACKAGE_FOUND.toString()) {
                 call.respond(HttpStatusCode.Conflict, mapOf("message" to "This package has been added",
+                    ("type" to exception.message ?: "") as Pair<Any, Any>
+                ))
+            }
+        }
+
+        exception<VerifyException> { exception ->
+            if(exception.message ?: "" == Type.CAPTCHA_INCORRECT.toString()) {
+                call.respond(HttpStatusCode.NotFound, mapOf("message" to "Captcha is not correct",
                     ("type" to exception.message ?: "") as Pair<Any, Any>
                 ))
             }
@@ -161,6 +165,7 @@ fun Application.module(testing: Boolean = false) {
                 val userPass = parameters["pass"].toString().hashCode()
                 val email = parameters["email"].toString()
                 val joinTime = parameters["joinTime"].toString()
+                val captcha = GenerateCaptcha.getCaptcha()
 
                 if(database.sequenceOf(Users).any {Users.user_name eq userName})
                     throw RegisterException(Type.USER_EXISTED.toString())
@@ -171,9 +176,24 @@ fun Application.module(testing: Boolean = false) {
                     set(it.user_pass, userPass)
                     set(it.user_perm, Permissions.NORMAL.toString())
                     set(it.user_join_time, joinTime)
+                    set(it.user_captcha, captcha)
                 }
 
                 call.respond(mapOf("message" to "Registered successfully", "type" to Type.SUCCESS))
+            }
+
+            post("/verifyEmail") {
+                val captcha = call.parameters["id"].toString()
+
+                if(!database.sequenceOf(Users).any {Users.user_captcha eq captcha})
+                    throw VerifyException(Type.CAPTCHA_INCORRECT.toString())
+
+                database.update(Users) {
+                    set(it.user_checked_email, true)
+                    where { it.user_captcha eq captcha }
+                }
+
+                call.respond(mapOf("message" to "Email Check Successfully", "type" to Type.SUCCESS))
             }
 
             authenticate {
@@ -210,7 +230,7 @@ fun Application.module(testing: Boolean = false) {
                         val desc = reqBody["description"].toString()
                         val javaVersion: String? = reqBody["javaVersion"].toString()
                         val lastUpdate = reqBody["lastUpdated"].toString()
-                        val mcVersion: String ? = reqBody["mcver"].toString()
+                        val mcVersion: String? = reqBody["mcver"].toString()
                         val verified = reqBody["verified"].toBoolean()
                         val icon = reqBody["icon"].toString()
 
