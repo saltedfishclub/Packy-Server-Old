@@ -8,6 +8,7 @@ import cc.sfclub.packyserver.tables.Packages
 import cc.sfclub.packyserver.tables.Resources
 import cc.sfclub.packyserver.tables.Users
 import cc.sfclub.packyserver.utils.GenerateCaptcha
+import cc.sfclub.packyserver.utils.SendCaptcha
 import com.sun.management.OperatingSystemMXBean
 import io.ktor.application.*
 import io.ktor.auth.*
@@ -23,6 +24,7 @@ import org.ktorm.database.Database
 import org.ktorm.dsl.*
 import org.ktorm.entity.any
 import org.ktorm.entity.sequenceOf
+import org.mindrot.jbcrypt.BCrypt
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.util.*
@@ -35,6 +37,7 @@ fun Application.module(testing: Boolean = false) {
     val user = environment.config.property("ktor.mysql.user").getString()
     val password = environment.config.property("ktor.mysql.password").getString()
     val sender = environment.config.property("ktor.captcha.sender").getString()
+    val pass = environment.config.property("ktor.captcha.pass").getString()
     val host = environment.config.property("ktor.captcha.host").getString()
     val database = Database.connect("jdbc:mysql://localhost:3306/PACKY", user = user, password = password)
     val verifier = Auth.makeJwtVerifier()
@@ -139,36 +142,45 @@ fun Application.module(testing: Boolean = false) {
                         }
                 }
 
-                post {  }
+                authenticate {
+                    post {
+                        
+                    }
+                }
             }
 
             post("/login") {
                 val parameters = call.receiveParameters()
                 val userName = parameters["user"].toString()
-                val passWord = parameters["pass"].toString().hashCode()
+                val passWord = BCrypt.hashpw(parameters["pass"].toString(), BCrypt.gensalt())
 
-                if(!database.sequenceOf(Users).any {(Users.user_name eq userName) and (Users.user_pass eq passWord)})
+                if(!database.sequenceOf(Users).any { Users.user_name eq userName })
                     throw LoginException(Type.WRONG_PASSWORD_OR_NAME.toString())
 
                 database
                     .from(Users)
-                    .select(Users.user_name, Users.user_pass, Users.user_perm)
-                    .where {(Users.user_pass eq passWord) and (Users.user_name eq userName)}
+                    .select(Users.user_name, Users.user_pass, Users.user_perm, Users.user_id)
+                    .where { Users.user_pass eq passWord }
                     .forEach { row ->
-                        call.respond(mapOf("type" to Type.SUCCESS, "token" to Auth.sign(userName, row[Users.user_perm].toString())))
+                        if(!BCrypt.checkpw(passWord, row[Users.user_pass].toString()))
+                            throw LoginException(Type.WRONG_PASSWORD_OR_NAME.toString())
+
+                        call.respond(mapOf("type" to Type.SUCCESS, "token" to Auth.sign(row[Users.user_id].toString(), row[Users.user_perm].toString())))
                     }
             }
 
             post("/register") {
                 val parameters = call.receiveParameters()
                 val userName = parameters["name"].toString()
-                val userPass = parameters["pass"].toString().hashCode()
+                val userPass = BCrypt.hashpw(parameters["pass"].toString(), BCrypt.gensalt())
                 val email = parameters["email"].toString()
                 val joinTime = parameters["joinTime"].toString()
                 val captcha = GenerateCaptcha.getCaptcha()
 
                 if(database.sequenceOf(Users).any {Users.user_name eq userName})
                     throw RegisterException(Type.USER_EXISTED.toString())
+
+                SendCaptcha.send(email, sender, pass, host, captcha, userName)
 
                 database.insert(Users) {
                     set(it.user_name, userName)
@@ -182,7 +194,7 @@ fun Application.module(testing: Boolean = false) {
                 call.respond(mapOf("message" to "Registered successfully", "type" to Type.SUCCESS))
             }
 
-            post("/verifyEmail") {
+            get("/verifyEmail/{id}") {
                 val captcha = call.parameters["id"].toString()
 
                 if(!database.sequenceOf(Users).any {Users.user_captcha eq captcha})
@@ -204,7 +216,7 @@ fun Application.module(testing: Boolean = false) {
                         when (part) {
                             is PartData.FileItem -> {
                                 val fileName = UUID.randomUUID().toString()
-                                var fileBytes = part.streamProvider().readBytes()
+                                val fileBytes = part.streamProvider().readBytes()
 
                                 File("resources/$fileName").writeBytes(fileBytes)
 
@@ -218,19 +230,19 @@ fun Application.module(testing: Boolean = false) {
                     }
                 }
 
-                route("/package") {
-                    post("/{name}") {
+                route("/package/{name}") {
+                    post {
                         val reqBody = call.receiveParameters()
                         val name = call.parameters["name"].toString()
-                        val agreement: String? = reqBody["agreement"].toString()
-                        val arch: String? = reqBody["arch"].toString()
+                        val agreement = reqBody["agreement"].toString()
+                        val arch = reqBody["arch"].toString()
                         val authors = reqBody["authors"].toString()
-                        val conflicts: String? = reqBody["conflicts"].toString()
-                        val depends: String? = reqBody["conflicts"].toString()
+                        val conflicts = reqBody["conflicts"].toString()
+                        val depends = reqBody["conflicts"].toString()
                         val desc = reqBody["description"].toString()
-                        val javaVersion: String? = reqBody["javaVersion"].toString()
+                        val javaVersion = reqBody["javaVersion"].toString()
                         val lastUpdate = reqBody["lastUpdated"].toString()
-                        val mcVersion: String? = reqBody["mcver"].toString()
+                        val mcVersion = reqBody["mcver"].toString()
                         val verified = reqBody["verified"].toBoolean()
                         val icon = reqBody["icon"].toString()
 
