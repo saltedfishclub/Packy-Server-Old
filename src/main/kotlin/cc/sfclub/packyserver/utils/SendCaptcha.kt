@@ -1,6 +1,5 @@
 package cc.sfclub.packyserver.utils
 
-import sun.nio.cs.UTF_8
 import java.util.Properties
 import javax.mail.Message
 import javax.mail.Session

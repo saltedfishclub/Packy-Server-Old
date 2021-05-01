@@ -7,6 +7,7 @@ import cc.sfclub.packyserver.principals.UserInfo
 import cc.sfclub.packyserver.tables.Packages
 import cc.sfclub.packyserver.tables.Resources
 import cc.sfclub.packyserver.tables.Users
+import cc.sfclub.packyserver.utils.Encrypt
 import cc.sfclub.packyserver.utils.GenerateCaptcha
 import cc.sfclub.packyserver.utils.SendCaptcha
 import com.sun.management.OperatingSystemMXBean
@@ -24,7 +25,6 @@ import org.ktorm.database.Database
 import org.ktorm.dsl.*
 import org.ktorm.entity.any
 import org.ktorm.entity.sequenceOf
-import org.mindrot.jbcrypt.BCrypt
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.util.*
@@ -144,7 +144,7 @@ fun Application.module(testing: Boolean = false) {
 
                 authenticate {
                     post {
-                        
+                        call.respond(mapOf("text" to call.receiveParameters()["name"]))
                     }
                 }
             }
@@ -152,19 +152,16 @@ fun Application.module(testing: Boolean = false) {
             post("/login") {
                 val parameters = call.receiveParameters()
                 val userName = parameters["user"].toString()
-                val passWord = BCrypt.hashpw(parameters["pass"].toString(), BCrypt.gensalt())
+                val passWord = parameters["pass"].toString()
 
-                if(!database.sequenceOf(Users).any { Users.user_name eq userName })
+                if(!database.sequenceOf(Users).any { (Users.user_name eq userName) and (Users.user_pass eq Encrypt.sha256(passWord))})
                     throw LoginException(Type.WRONG_PASSWORD_OR_NAME.toString())
 
                 database
                     .from(Users)
                     .select(Users.user_name, Users.user_pass, Users.user_perm, Users.user_id)
-                    .where { Users.user_pass eq passWord }
+                    .where { Users.user_pass eq Encrypt.sha256(passWord) }
                     .forEach { row ->
-                        if(!BCrypt.checkpw(passWord, row[Users.user_pass].toString()))
-                            throw LoginException(Type.WRONG_PASSWORD_OR_NAME.toString())
-
                         call.respond(mapOf("type" to Type.SUCCESS, "token" to Auth.sign(row[Users.user_id].toString(), row[Users.user_perm].toString())))
                     }
             }
@@ -172,7 +169,7 @@ fun Application.module(testing: Boolean = false) {
             post("/register") {
                 val parameters = call.receiveParameters()
                 val userName = parameters["name"].toString()
-                val userPass = BCrypt.hashpw(parameters["pass"].toString(), BCrypt.gensalt())
+                val userPass = parameters["pass"].toString()
                 val email = parameters["email"].toString()
                 val joinTime = parameters["joinTime"].toString()
                 val captcha = GenerateCaptcha.getCaptcha()
@@ -185,7 +182,7 @@ fun Application.module(testing: Boolean = false) {
                 database.insert(Users) {
                     set(it.user_name, userName)
                     set(it.user_email, email)
-                    set(it.user_pass, userPass)
+                    set(it.user_pass, Encrypt.sha256(userPass))
                     set(it.user_perm, Permissions.NORMAL.toString())
                     set(it.user_join_time, joinTime)
                     set(it.user_captcha, captcha)
