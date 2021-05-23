@@ -28,18 +28,6 @@ fun Application.pkg(testing: Boolean = false) {
     val password = environment.config.property("ktor.mysql.password").getString()
     val database = Database.connect("jdbc:mysql://localhost:3306/PACKY", user = user, password = password)
 
-    install(StatusPages) {
-        exception<PackageException> { exception ->
-            if(exception.message ?: "" == Type.PACKAGE_FOUND.toString()) {
-                call.respond(
-                    HttpStatusCode.Conflict, mapOf("message" to "This package has been added",
-                        ("type" to exception.message ?: "") as Pair<Any, Any>
-                    )
-                )
-            }
-        }
-    }
-
     routing {
         route("/api/v1") {
             authenticate {

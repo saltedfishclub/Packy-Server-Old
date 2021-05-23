@@ -1,11 +1,8 @@
 package cc.sfclub.packyserver
 
-import cc.sfclub.packyserver.enum.Permissions
 import cc.sfclub.packyserver.enum.Type
 import cc.sfclub.packyserver.exceptions.*
 import cc.sfclub.packyserver.principals.UserInfo
-import cc.sfclub.packyserver.tables.Packages
-import cc.sfclub.packyserver.tables.Resources
 import com.sun.management.OperatingSystemMXBean
 import io.ktor.application.*
 import io.ktor.auth.*
@@ -15,24 +12,78 @@ import io.ktor.routing.*
 import io.ktor.gson.*
 import io.ktor.features.*
 import io.ktor.http.*
-import io.ktor.http.content.*
-import io.ktor.request.*
-import org.ktorm.database.Database
-import org.ktorm.dsl.*
-import org.ktorm.entity.any
-import org.ktorm.entity.sequenceOf
-import java.io.File
 import java.lang.management.ManagementFactory
-import java.util.*
 
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
 @Suppress("unused")
 @kotlin.jvm.JvmOverloads
 fun Application.home(testing: Boolean = false) {
+    val verifier = Auth.makeJwtVerifier()
 
     install(ContentNegotiation) {
         gson {
+        }
+    }
+
+    install(Authentication) {
+        jwt {
+            verifier(verifier)
+            validate {
+                UserInfo(it.payload.getClaim("user_name").asString(), it.payload.getClaim("user_perm").asString())
+            }
+        }
+    }
+
+    install(StatusPages) {
+        status(HttpStatusCode.Unauthorized) {
+            call.respond(mapOf("message" to "You don't have the permission to do this", "type" to Type.PERMISSION_DENIED))
+        }
+
+        exception<RegisterException> { exception ->
+            if(exception.message ?: "" == Type.USER_EXISTED.toString()) {
+                call.respond(
+                    HttpStatusCode.Conflict, mapOf("message" to "This username has been registered",
+                        ("type" to exception.message ?: "") as Pair<Any, Any>
+                    ))
+            }
+        }
+
+        exception<LoginException> { exception ->
+            if(exception.message ?: "" == Type.WRONG_PASSWORD_OR_NAME.toString()) {
+                call.respond(
+                    HttpStatusCode.NotFound, mapOf("message" to "Username or password wrong",
+                        ("type" to exception.message ?: "") as Pair<Any, Any>
+                    ))
+            }
+        }
+
+        exception<UserInfoException> { exception ->
+            if(exception.message ?: "" == Type.USER_NOT_FOUND.toString()) {
+                call.respond(
+                    HttpStatusCode.NotFound, mapOf("message" to "User not found",
+                        ("type" to exception.message ?: "") as Pair<Any, Any>
+                    ))
+            }
+        }
+
+        exception<VerifyException> { exception ->
+            if(exception.message ?: "" == Type.CAPTCHA_INCORRECT.toString()) {
+                call.respond(
+                    HttpStatusCode.NotFound, mapOf("message" to "Captcha is not correct",
+                    ("type" to exception.message ?: "") as Pair<Any, Any>
+                ))
+            }
+        }
+
+        exception<PackageException> { exception ->
+            if(exception.message ?: "" == Type.PACKAGE_FOUND.toString()) {
+                call.respond(
+                    HttpStatusCode.Conflict, mapOf("message" to "This package has been added",
+                        ("type" to exception.message ?: "") as Pair<Any, Any>
+                    )
+                )
+            }
         }
     }
 
