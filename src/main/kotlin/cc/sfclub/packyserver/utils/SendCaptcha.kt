@@ -14,14 +14,14 @@ object SendCaptcha {
         props.setProperty("mail.transport.protocol", "smtp")
         props.setProperty("mail.smtp.host", host)
         val session: Session = Session.getInstance(props)
-        session.debug = true
+        session.debug = true //TODO 上线时关闭debug
         var msg: Message = MimeMessage(session)
         val transport: Transport = session.transport
 
         msg.setFrom(InternetAddress(sender, "Packy Group", "UTF-8"))
         msg.setRecipient(MimeMessage.RecipientType.TO, InternetAddress(to, name, "UTF-8"))
         msg.subject = "Packy邮箱验证"
-        msg.setContent("验证码: $captcha", "text/html;charset=UTF-8")
+        msg.setContent("验证码: $captcha", "text/html;charset=UTF-8") //TODO 上线时验证码带URL
         msg.saveChanges()
 
         transport.connect(sender, pass)
