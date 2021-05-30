@@ -6,7 +6,7 @@ import com.auth0.jwt.algorithms.Algorithm
 import java.util.*
 
 object Auth {
-    private val SECRET_KEY = (0..99999999).random().toString()
+    private val SECRET_KEY = UUID.randomUUID().toString().replace("-", "")
     private val algorithm = Algorithm.HMAC512(SECRET_KEY)
     private const val issuer = "pkg.sfclub.cc"
     private const val validityInMs = 3600*1000
