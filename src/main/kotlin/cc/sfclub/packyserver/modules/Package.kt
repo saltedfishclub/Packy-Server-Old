@@ -2,13 +2,12 @@ package cc.sfclub.packyserver.modules
 
 import cc.sfclub.packyserver.enum.Type
 import cc.sfclub.packyserver.exceptions.PackageException
+import cc.sfclub.packyserver.models.Package
 import cc.sfclub.packyserver.principals.UserInfo
 import cc.sfclub.packyserver.tables.Packages
 import cc.sfclub.packyserver.tables.Resources
 import io.ktor.application.*
 import io.ktor.auth.*
-import io.ktor.features.*
-import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.request.*
 import io.ktor.response.*
@@ -16,6 +15,7 @@ import io.ktor.routing.*
 import org.ktorm.database.Database
 import org.ktorm.dsl.eq
 import org.ktorm.dsl.insert
+import org.ktorm.entity.add
 import org.ktorm.entity.any
 import org.ktorm.entity.sequenceOf
 import java.io.File
@@ -68,23 +68,24 @@ fun Application.pkg(testing: Boolean = false) {
                         val verified = reqBody["verified"].toBoolean()
                         val icon = reqBody["icon"].toString()
 
-                        if(database.sequenceOf(Packages).any { Packages.pkg_name eq name})
-                            throw PackageException(Type.PACKAGE_FOUND.toString())
+                        if(!database.sequenceOf(Packages).any { Packages.pkg_name eq name})
+                            throw PackageException("Package Not Found")
 
-                        database.insert(Packages) {
-                            set(it.pkg_name, name)
-                            set(it.pkg_arch, arch)
-                            set(it.pkg_agreement, agreement)
-                            set(it.pkg_authors, authors)
-                            set(it.pkg_conflicts, conflicts)
-                            set(it.pkg_depends, depends)
-                            set(it.pkg_desc, desc)
-                            set(it.pkg_icon, icon)
-                            set(it.pkg_java_version, javaVersion)
-                            set(it.pkg_last_update, lastUpdate)
-                            set(it.pkg_verified, verified)
-                            set(it.pkg_mc_version, mcVersion)
+                        val pkg = Package {
+                            pkg_name = name
+                            pkg_agreement = agreement
+                            pkg_arch = arch
+                            pkg_authors = authors
+                            pkg_conflicts = conflicts
+                            pkg_depends = depends
+                            pkg_desc = desc
+                            pkg_java_version = javaVersion
+                            pkg_last_update = lastUpdate
+                            pkg_mc_version = mcVersion
+                            pkg_verified = verified
+                            pkg_icon = icon
                         }
+                        database.sequenceOf(Packages).add(pkg)
 
                         call.respond(mapOf("message" to "Add package successfully", "type" to Type.SUCCESS))
                     }
