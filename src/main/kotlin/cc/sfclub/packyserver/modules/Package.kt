@@ -69,7 +69,7 @@ fun Application.pkg(testing: Boolean = false) {
                         val icon = reqBody["icon"].toString()
 
                         if(!database.sequenceOf(Packages).any { Packages.pkg_name eq name})
-                            call.response.status(HttpStatusCode.NotFound)
+                            call.respond(HttpStatusCode.NotFound)
 
                         val pkg = Package {
                             pkg_name = name

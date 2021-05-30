@@ -34,7 +34,7 @@ fun Application.user(testing: Boolean = false) {
             route("/user/{id}") {
                 get {
                     if(!database.sequenceOf(Users).any { Users.user_id eq call.parameters["id"].toString().toInt() })
-                        call.response.status(HttpStatusCode.NotFound)
+                        call.respond(HttpStatusCode.NotFound)
 
                     val user = database
                         .from(Users)
@@ -60,7 +60,7 @@ fun Application.user(testing: Boolean = false) {
                 val passWord = parameters["pass"].toString()
 
                 if(!database.sequenceOf(Users).any { (Users.user_name eq userName) and (Users.user_pass eq Encrypt.sha256(passWord))})
-                    call.response.status(HttpStatusCode.NotFound)
+                    call.respond(HttpStatusCode.NotFound)
 
                 val user = database
                     .from(Users)
@@ -83,7 +83,7 @@ fun Application.user(testing: Boolean = false) {
                 val captcha = GenerateCaptcha.getCaptcha()
 
                 if(database.sequenceOf(Users).any {Users.user_name eq userName})
-                    call.response.status(HttpStatusCode.Conflict)
+                    call.respond(HttpStatusCode.Conflict)
 
                 SendCaptcha.send(email, sender, pass, host, captcha, userName)
 
@@ -103,7 +103,7 @@ fun Application.user(testing: Boolean = false) {
                 val captcha = call.parameters["id"].toString()
 
                 if(!database.sequenceOf(Users).any { Users.user_captcha eq captcha })
-                    call.response.status(HttpStatusCode.NotAcceptable)
+                    call.respond(HttpStatusCode.NotAcceptable)
 
                 val user = User {
                     user_captcha = captcha

@@ -39,15 +39,19 @@ fun Application.home(testing: Boolean = false) {
 
     install(StatusPages) {
         status(HttpStatusCode.Unauthorized) {
-            call.respond(mapOf("code" to "502", "message" to Type.FAILED))
+            call.respond(HttpStatusCode.Unauthorized, mapOf("code" to "502", "message" to Type.FAILED))
         }
 
         status(HttpStatusCode.NotFound) {
-            call.respond(mapOf("code" to "404", "message" to Type.FAILED))
+            call.respond(HttpStatusCode.NotFound, mapOf("code" to "404", "message" to Type.FAILED))
         }
 
         status(HttpStatusCode.NotAcceptable) {
-            call.respond(mapOf("code" to "404", "message" to Type.FAILED))
+            call.respond(HttpStatusCode.NotAcceptable, mapOf("code" to "406", "message" to Type.FAILED))
+        }
+
+        status(HttpStatusCode.Conflict) {
+            call.respond(HttpStatusCode.Conflict, mapOf("code" to "409", "message" to Type.FAILED))
         }
     }
 
