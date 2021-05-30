@@ -1,8 +1,8 @@
 package cc.sfclub.packyserver
 
 import cc.sfclub.packyserver.enum.Type
-import cc.sfclub.packyserver.exceptions.*
-import cc.sfclub.packyserver.principals.UserInfo
+import cc.sfclub.packyserver.models.UserInfo
+import cc.sfclub.packyserver.utils.Auth
 import com.sun.management.OperatingSystemMXBean
 import io.ktor.application.*
 import io.ktor.auth.*
@@ -39,27 +39,15 @@ fun Application.home(testing: Boolean = false) {
 
     install(StatusPages) {
         status(HttpStatusCode.Unauthorized) {
-            call.respond(mapOf("message" to "You don't have the permission to do this", "type" to Type.FAILED))
+            call.respond(mapOf("code" to "502", "message" to Type.FAILED))
         }
 
-        exception<RegisterException> { exception ->
-            call.respond(mapOf(("message" to exception.message ?: "") as Pair<Any, Any>, "type" to Type.FAILED))
+        status(HttpStatusCode.NotFound) {
+            call.respond(mapOf("code" to "404", "message" to Type.FAILED))
         }
 
-        exception<LoginException> { exception ->
-            call.respond(mapOf(("message" to exception.message ?: "") as Pair<Any, Any>, "type" to Type.FAILED))
-        }
-
-        exception<PermissionException> { exception ->
-            call.respond(mapOf(("message" to exception.message ?: "") as Pair<Any, Any>, "type" to Type.FAILED))
-        }
-
-        exception<UserInfoException> { exception ->
-            call.respond(mapOf(("message" to exception.message ?: "") as Pair<Any, Any>, "type" to Type.FAILED))
-        }
-
-        exception<VerifyException> { exception ->
-            call.respond(mapOf(("message" to exception.message ?: "") as Pair<Any, Any>, "type" to Type.FAILED))
+        status(HttpStatusCode.NotAcceptable) {
+            call.respond(mapOf("code" to "404", "message" to Type.FAILED))
         }
     }
 
@@ -74,7 +62,7 @@ fun Application.home(testing: Boolean = false) {
                 val os = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean::class.java)
                 val average = os.systemLoadAverage
 
-                call.respond(mapOf("status" to status, "average" to average))
+                call.respond(mapOf("code" to "200", "message" to Type.SUCCESS, "data" to mapOf("status" to status, "average" to average)))
             }
         }
     }

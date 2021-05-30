@@ -1,4 +1,4 @@
-package cc.sfclub.packyserver.principals
+package cc.sfclub.packyserver.models
 
 import io.ktor.auth.*
 

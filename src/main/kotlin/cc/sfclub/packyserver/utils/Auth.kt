@@ -1,4 +1,4 @@
-package cc.sfclub.packyserver
+package cc.sfclub.packyserver.utils
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
@@ -6,10 +6,10 @@ import com.auth0.jwt.algorithms.Algorithm
 import java.util.*
 
 object Auth {
-    private const val SECRET_KEY = "c2ZjbHViX3Byb2plY3RfcGFja3kKIA=="
+    private val SECRET_KEY = (0..99999999).random().toString()
     private val algorithm = Algorithm.HMAC512(SECRET_KEY)
     private const val issuer = "pkg.sfclub.cc"
-    private const val validityInMs = 3600*1000 //1h
+    private const val validityInMs = 3600*1000
 
     fun makeJwtVerifier(): JWTVerifier = JWT
         .require(algorithm)

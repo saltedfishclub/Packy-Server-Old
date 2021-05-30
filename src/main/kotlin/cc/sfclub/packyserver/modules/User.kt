@@ -1,11 +1,7 @@
 package cc.sfclub.packyserver.modules
 
-import cc.sfclub.packyserver.Auth
+import cc.sfclub.packyserver.utils.Auth
 import cc.sfclub.packyserver.enum.Type
-import cc.sfclub.packyserver.exceptions.LoginException
-import cc.sfclub.packyserver.exceptions.RegisterException
-import cc.sfclub.packyserver.exceptions.UserInfoException
-import cc.sfclub.packyserver.exceptions.VerifyException
 import cc.sfclub.packyserver.models.User
 import cc.sfclub.packyserver.tables.Users
 import cc.sfclub.packyserver.utils.Encrypt
@@ -13,6 +9,7 @@ import cc.sfclub.packyserver.utils.GenerateCaptcha
 import cc.sfclub.packyserver.utils.SendCaptcha
 import io.ktor.application.*
 import io.ktor.auth.*
+import io.ktor.http.*
 import io.ktor.request.*
 import io.ktor.response.*
 import io.ktor.routing.*
@@ -37,7 +34,7 @@ fun Application.user(testing: Boolean = false) {
             route("/user/{id}") {
                 get {
                     if(!database.sequenceOf(Users).any { Users.user_id eq call.parameters["id"].toString().toInt() })
-                        throw UserInfoException("User Not Found")
+                        call.response.status(HttpStatusCode.NotFound)
 
                     val user = database
                         .from(Users)
@@ -47,7 +44,7 @@ fun Application.user(testing: Boolean = false) {
                                 row -> Users.createEntity(row)
                         }
 
-                    call.respond(mapOf("message" to "Query User Successfully", "type" to Type.SUCCESS, "user" to user))
+                    call.respond(mapOf("code" to "200", "message" to Type.SUCCESS, "data" to user[0]))
                 }
 
                 authenticate {
@@ -63,7 +60,7 @@ fun Application.user(testing: Boolean = false) {
                 val passWord = parameters["pass"].toString()
 
                 if(!database.sequenceOf(Users).any { (Users.user_name eq userName) and (Users.user_pass eq Encrypt.sha256(passWord))})
-                    throw LoginException("Password or Username Wrong")
+                    call.response.status(HttpStatusCode.NotFound)
 
                 val user = database
                     .from(Users)
@@ -72,7 +69,7 @@ fun Application.user(testing: Boolean = false) {
                     .map { row ->
                         Users.createEntity(row)
                     }
-                call.respond(mapOf("message" to "Login Successfully", "type" to Type.SUCCESS, "token" to Auth.sign(user.get(0).user_id.toString(), user.get(0).user_perm), "user" to user))
+                call.respond(mapOf("code" to "200", "message" to Type.SUCCESS, "data" to mapOf("token" to Auth.sign(user[0].user_id.toString(), user[0].user_perm), "user" to user[0])))
             }
 
             post("/register") {
@@ -86,7 +83,7 @@ fun Application.user(testing: Boolean = false) {
                 val captcha = GenerateCaptcha.getCaptcha()
 
                 if(database.sequenceOf(Users).any {Users.user_name eq userName})
-                    throw RegisterException("This Username is existed")
+                    call.response.status(HttpStatusCode.Conflict)
 
                 SendCaptcha.send(email, sender, pass, host, captcha, userName)
 
@@ -99,14 +96,14 @@ fun Application.user(testing: Boolean = false) {
                 }
                 database.sequenceOf(Users).add(user)
 
-                call.respond(mapOf("message" to "Registered successfully", "type" to Type.SUCCESS))
+                call.respond(mapOf("code" to "200", "message" to Type.SUCCESS))
             }
 
             get("/verifyEmail/{id}") {
                 val captcha = call.parameters["id"].toString()
 
                 if(!database.sequenceOf(Users).any { Users.user_captcha eq captcha })
-                    throw VerifyException("Captcha Wrong")
+                    call.response.status(HttpStatusCode.NotAcceptable)
 
                 val user = User {
                     user_captcha = captcha
@@ -114,7 +111,7 @@ fun Application.user(testing: Boolean = false) {
                 }
                 database.sequenceOf(Users).update(user)
 
-                call.respond(mapOf("message" to "Email Check Successfully", "type" to Type.SUCCESS))
+                call.respond(mapOf("code" to "200", "message" to Type.SUCCESS))
             }
         }
     }

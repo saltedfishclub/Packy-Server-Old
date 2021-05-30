@@ -1,13 +1,13 @@
 package cc.sfclub.packyserver.modules
 
 import cc.sfclub.packyserver.enum.Type
-import cc.sfclub.packyserver.exceptions.PackageException
 import cc.sfclub.packyserver.models.Package
-import cc.sfclub.packyserver.principals.UserInfo
+import cc.sfclub.packyserver.models.UserInfo
 import cc.sfclub.packyserver.tables.Packages
 import cc.sfclub.packyserver.tables.Resources
 import io.ktor.application.*
 import io.ktor.auth.*
+import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.request.*
 import io.ktor.response.*
@@ -46,7 +46,7 @@ fun Application.pkg(testing: Boolean = false) {
                                     set(it.res_id, fileName)
                                 }
 
-                                call.respond(mapOf("id" to fileName))
+                                call.respond(mapOf("code" to "200", "message" to Type.SUCCESS, "data" to mapOf("fileId" to fileName)))
                             }
                         }
                     }
@@ -69,7 +69,7 @@ fun Application.pkg(testing: Boolean = false) {
                         val icon = reqBody["icon"].toString()
 
                         if(!database.sequenceOf(Packages).any { Packages.pkg_name eq name})
-                            throw PackageException("Package Not Found")
+                            call.response.status(HttpStatusCode.NotFound)
 
                         val pkg = Package {
                             pkg_name = name
@@ -87,7 +87,7 @@ fun Application.pkg(testing: Boolean = false) {
                         }
                         database.sequenceOf(Packages).add(pkg)
 
-                        call.respond(mapOf("message" to "Add package successfully", "type" to Type.SUCCESS))
+                        call.respond(mapOf("code" to "200", "message" to Type.SUCCESS))
                     }
                 }
 
